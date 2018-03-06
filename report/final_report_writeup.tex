@@ -1,0 +1,165 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips15submit_e,times}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\renewcommand{\arraystretch}{1.5}
+\raggedbottom
+\usepackage{booktabs}       % professional-quality tables
+
+
+
+%\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
+
+
+\title{Deep Reinforcement Learning with Actor Critic}
+
+\author{
+Christopher M.~Lamb\\
+Department of Computer Science\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{c2lamb@eng.ucsd.edu} \\
+\And
+Daniel ~Reznikov\\
+Department of Computer Science\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{drezniko@eng.ucsd.edu} \\
+\And
+Luke ~Liem\\
+Department of Computer Science\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{lliem@eng.ucsd.edu} \\
+\And
+Alexander ~Potapov\\
+Department of Electrical and Computer Engineering\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{apotapov@eng.ucsd.edu} \\
+\And
+Sean ~Kinzer\\
+Department of Computer Science\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{skinzer@eng.ucsd.edu} \\
+\And
+Christian ~Koguchi\\
+Department of Electrical and Computer Engineering\\
+University of California San Diego\\
+San Diego, CA 92122 \\
+\texttt{ckoguchi@eng.ucsd.edu} \\
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\nipsfinalcopy % Uncomment for camera-ready version
+
+\begin{document}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Abstract
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+Deep Reinforcement Learning (RL) is a powerful approach to agent learning in complex environments. Its applications range from gaming, to robotics to financial-market trading, achieving state-of-the art results across some distinctly challenging problem spaces. The aim of this work is survey the actor-critic based techniques that have been applied to agent learning in Atari games \cite{aigym}. We profile baseline approaches, and experiment with changes to network topologies and configurations as well as the asynchronous multi-agent learning described by Minh et al \cite{a3c}.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction} 
+The actor-critic paradigm is simple and logically expressive. The actor's role is engage in some (pre-determined) policy, and the critic is responsible for evaluating this policy. Through interaction with the environment (in our case game-play) and explicit rewards (points scored) both the actor and critic are able iteratively update the representations of their tasks. Our goal is to profile a baseline approach which uses a single-agent advantage actor-critic model (where the actor is learning a policy through policy gradient \cite{karpathy} and the critic is learning a value function similar to classic Q-Learning \cite{dqn}), and explore ways we can modify the network to achieve better performance. We also try to reimplement A3C \cite{a3c} for asynchronous multi-agent play what has recently been shown to reduce learning time drastically. In sum, our efforts represent a survey of the state-of-the art methods, which some experimentation do understand more deeply how network topologies (architectures and convolution vs linear approaches) affect both the ability of agents to learn and the training time.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Related Works
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Related Works}
+
+
+% deep Q \cite{dqn}
+% A2C \cite{a2c}
+% Policy Gradient \cite{karpathy}
+% A3C \cite{a3c}
+% Rainbow \cite{rainbow}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Methodology
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Methodology}
+
+\subsection{System} Our group is lucky to have access to a GPU machine with 4 core Intel i7 processors, 32GB of RAM, and a powerful  Nvidia GTX-Geforce 1080-Ti GPU with 11GB of VRAM. We install OpenAiGym \cite{aigym} to support Atari game-play and PyTorch \cite{pytorch} for neural network (NN) development. 
+
+
+\subsection{Experiment Setup} We clear Cuda GPU cache to avoid biasing from data cache hits in profiling run-times experiments.
+
+\subsection{Metrics} \label{metrics}
+To compare the performance across experiments, we measure \textit{score\_vs\_episodes}. To understand who the experiment configuration affect training time, we also report on \textit{time\_per\_episode}. For a comparison, we thought it would be interesting to include the performance of human players as reported by Minh et al \cite{a3c}. The human score is given by the 75th percentile score achieved by an average of human experts. 
+
+\subsection{Games} In order to profile a wide-range of difficulties, we identify easy, medium and hard games. While the size of the action space varies from $[4,20]$, the major differentiating factor for complexity comes from the delay in reward assignment. Pong and Breakout and the easy games, Space Invaders is the easy game, and Berzerk is the hard game. The following table uses a metric to quantitatively measure game complexity, the results are summarized:
+
+
+\begin{figure}[ht!] 
+\centering
+ \begin{tabular}{c c c c} 
+ \toprule
+ Game Name & Difficulty Score &Category\\ [0.5ex] 
+\midrule
+ Pong & 2 & Easy \\ 
+ Breakout & 3 & Easy \\
+ Space Invaders & 5 & Medium\\
+ Berzerk & 9 & Hard\\
+ \bottomrule
+\end{tabular}
+\label{game_difficulties}
+\caption{Game Difficulties}
+\end{figure}
+
+\noindent OpenAIGym exposes two methods of game-play. RAM provides the memory state of the game, and RGB which only provides a RGB image of the screen, reflecting the pixel values that would be rendered for game-play. Each action provided by the agent is repeatedly performed for a duration of $k$ frames where $k$ is uniformly sampled from $\{2,3,4\}$. We exclusively use RGB mode, which provides our model with the same information that a human player would have.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Experiments
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Experiments}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Results
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Conclusions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Acknowledgements
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bibliography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\nocite{*}
+\bibliography{biblio} 
+\bibliographystyle{ieeetr}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
