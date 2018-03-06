@@ -38,7 +38,9 @@ def main():
                                                                    episodes)
         try:
             with open(model_file, 'rb') as f:
-                model = pickle.load(f)
+                # Model Save and Load Update: Include both model and optim parameters
+                saved_model = pickle.load(f)
+                model, _ = saved_model
 
         except OSError:
             print('Model file not found.')
@@ -48,7 +50,7 @@ def main():
         model = Policy(input_channels=num_frames, num_actions=num_actions)
 
 
-    model.temperature = max(0.5, 2.0 - 1.5 * ((episodes) / 1.0e4))
+    model.temperature = 1.0   # When we play, we sample as usual.
 
     for ep in range(max_episodes):
 
@@ -63,8 +65,7 @@ def main():
 
         for frame in range(max_frames):
 
-            if render:
-                env.render()
+            env.render()
 
             # Select action
             # LSTM Change: Need to cycle hx and cx thru select_action

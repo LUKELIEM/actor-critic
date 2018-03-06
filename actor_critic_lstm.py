@@ -35,11 +35,14 @@ def main():
     max_episodes = 1000000
     max_frames = 10000
     gamma = 0.95
+    lr = 1e-4   # LSTM Update: Work well in 1st iteration
+    target_score = 21.0  # Temperature Update: specific to Pong
 
     # Cold start
     if not warm_start:
         # Initialize model
         model = Policy(input_channels=num_frames, num_actions=num_actions)
+        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
 
         # Initialize statistics
         running_reward = None
@@ -62,11 +65,15 @@ def main():
                                                                     game,
                                                                     prior_eps)
             with open(model_file, 'rb') as f:
-                model = pickle.load(f)
+                # Model Save and Load Update: Include both model and optim parameters
+                saved_model = pickle.load(f)
+                model, optimizer = saved_model
 
         except OSError:
             print('Saved file not found. Creating new cold start model.')
             model = Policy(input_channels=num_frames, num_actions=num_actions)
+            optimizer = optim.RMSprop(model.parameters(), lr=lr,
+                                      weight_decay=0.1)
             running_reward = None
             running_rewards = []
             prior_eps = 0
@@ -76,11 +83,20 @@ def main():
     if cuda:
         model = model.cuda()
 
-    optimizer = optim.RMSprop(model.parameters(), lr=1e-4, weight_decay=0.1)  #LSTM Change: lr = 1e-4
 
     for ep in range(max_episodes):
-        # Anneal temperature from 2.0 down to 0.5 over 10000 episodes
-        model.temperature = max(0.5, 2.0 - 1.5 * ((ep+prior_eps) / 1.0e4))
+
+        # Temperature Update: specific to Pong
+        # Anneal temperature from 2.0 down to 0.8 based on how far running reward is from 
+        # target score
+        if running_reward is None:
+            model.temperature = 2.0   # Start with temp = 2.0 (Explore)
+        else:
+            # Specific to Pong - running reward starts at -21, so we encourage the agent
+            # to explore. temp = 0.8 + 1.2*[21-(-21)]/42 = 2.0
+            # As it gets closer to 0, temp = 0.8 + 1.2(21-0)/42 = 1.4
+            # As it gets to 7, temp = 0.8 + 1.2(21-14)/42 = 1.0
+            model.temperature = max(0.8, 0.8 + (target_score - running_reward)/42* 1.2)
 
         state = env.reset()
         state = preprocess_state(state)
@@ -131,19 +147,23 @@ def main():
         verbose_str = 'Episode {} complete'.format(ep+prior_eps+1)
         verbose_str += '\tReward total:{}'.format(reward_sum)
         verbose_str += '\tRunning mean: {:.4}'.format(running_reward)
+        # Temperature Update: Track temp
+        if (ep+prior_eps+1) % 5 == 0: 
+            verbose_str += '\tTemp = {:.4}'.format(model.temperature)    
         sys.stdout.write('\r' + verbose_str)
         sys.stdout.flush()
 
         # Update model
         finish_episode(model, optimizer, gamma, cuda)
 
-        if (ep+prior_eps+1) % 500 == 0:
+        if (ep+prior_eps+1) % 500 == 0: 
             model_file = 'saved_models/actor_critic_{}_ep_{}.p'.format(
                                                                 game,
                                                                 ep+prior_eps+1)
             data_file = 'results/{}.p'.format(game)
             with open(model_file, 'wb') as f:
-                pickle.dump(model.cpu(), f)
+                # Model Save and Load Update: Include both model and optim parameters 
+                pickle.dump((model.cpu(), optimizer), f)
 
             if cuda:
                 model = model.cuda()
