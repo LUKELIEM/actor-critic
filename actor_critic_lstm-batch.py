@@ -33,17 +33,16 @@ def main():
     # Initialize constants
     num_frames = 4
     max_episodes = 1000000
-    max_frames = 10000
+    max_frames = 6000   # limit episode to 6000 game steps
     gamma = 0.95
     lr = 1e-4   # LSTM Update: Work well in 1st iteration
     target_score = 21.0  # Temperature Update: specific to Pong
-    running_reward = -21   # Temperature Update: set running_reward to -21 to ensure temp = 2.0
 
     # Truncated Backprop(TBP) Update: 
     # Slide 41-44 CS231N_2017 Lecture 10 
     # Run forward and backward through chunks of sequence vs whole sequence. While hidden values hx and cx
     # are carried forward in time forever.
-    chunk_size = 128  
+    chunk_size = 512  
 
     # Cold start
     if not warm_start:
@@ -52,14 +51,14 @@ def main():
         optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
 
         # Initialize statistics
-        running_reward = None
+        running_reward = -21  # Temperature Update: set running_reward to -21 to ensure temp = 2.0
         running_rewards = []
         prior_eps = 0
 
     # Warm start
     if warm_start:
 
-        data_file = 'results/{}.p'.format(game)
+        data_file = 'results/ac-lstm-batch_{}.p'.format(game)
 
         try:
             with open(data_file, 'rb') as f:
@@ -68,7 +67,7 @@ def main():
 
             prior_eps = len(running_rewards)
 
-            model_file = 'saved_models/actor_critic_{}_ep_{}.p'.format(
+            model_file = 'saved_models/ac-lstm-batch_{}_ep_{}.p'.format(
                                                                     game,
                                                                     prior_eps)
             with open(model_file, 'rb') as f:
@@ -81,7 +80,7 @@ def main():
             model = Policy(input_channels=num_frames, num_actions=num_actions)
             optimizer = optim.RMSprop(model.parameters(), lr=lr,
                                       weight_decay=0.1)
-            running_reward = None
+            running_reward = -21
             running_rewards = []
             prior_eps = 0
 
@@ -93,17 +92,8 @@ def main():
 
     for ep in range(max_episodes):   # Truncated Backprop(TBP) Update: For every episode
 
-        # Temperature Update: specific to Pong
-        # Anneal temperature from 2.0 down to 0.8 based on how far running reward is from 
-        # target score
-        if running_reward is None:
-            model.temperature = 2.0   # Start with temp = 2.0 (Explore)
-        else:
-            # Specific to Pong - running reward starts at -21, so we encourage the agent
-            # to explore. temp = 0.8 + 1.2*[21-(-21)]/42 = 2.0
-            # As it gets closer to 0, temp = 0.8 + 1.2(21-0)/42 = 1.4
-            # As it gets to 7, temp = 0.8 + 1.2(21-14)/42 = 1.0
-            model.temperature = max(0.8, 0.8 + (target_score - running_reward)/42* 1.2)
+        # Anneal temperature from 1.8 down to 1.0 over 10000 episodes
+        model.temperature = max(0.5, 1.8 - 0.8 * ((ep+prior_eps) / 1.0e4))
 
         state = env.reset()
         state = preprocess_state(state)
@@ -119,6 +109,7 @@ def main():
             hx = hx.cuda()
 
         reward_sum = 0.0
+        grad_norm = 0.0  # Track grad norm for the episode
 
         while not done:  # TBP Update: if episode is not done
 
@@ -153,12 +144,15 @@ def main():
 
 
             # TBP Update: Backprop the fixed number of game steps back thru CNN-LSTM, and perform
-            # an update on the parameters of the Actor-Critic    
-            finish_chunk(model, optimizer, gamma, cuda)
+            # an update on the parameters of the Actor-Critic.
+            if frame > chunk_size/4:   
+                grad_norm = finish_chunk(model, optimizer, gamma, cuda)
 
-            # TBP Update: hidden values are carried forward
-            cx = Variable(cx.data)   
-            hx = Variable(hx.data)
+                # print (grad_norm, frame)   # for debugging nan problem
+
+                # TBP Update: hidden values are carried forward
+                cx = Variable(cx.data)   
+                hx = Variable(hx.data)
 
         # TBP Update: At this point, the episode is done. We need to do some bookkeeping
             
@@ -175,17 +169,18 @@ def main():
         verbose_str += '\tRunning mean: {:.4}'.format(running_reward)
         # Temperature Update: Track temp
         if (ep+prior_eps+1) % 5 == 0: 
-            verbose_str += '\tTemp = {:.4}'.format(model.temperature)    
+            verbose_str += '\tTemp = {:.4}'.format(model.temperature) 
+            verbose_str += '\tGrad norm:{}'.format(grad_norm)   
         sys.stdout.write('\r' + verbose_str)
         sys.stdout.flush()
 
 
         # Periodically save model and optimizer parameters, and statistics
         if (ep+prior_eps+1) % 100 == 0: 
-            model_file = 'saved_models/actor_critic_{}_ep_{}.p'.format(
+            model_file = 'saved_models/ac-lstm-batch_{}_ep_{}.p'.format(
                                                                 game,
                                                                 ep+prior_eps+1)
-            data_file = 'results/{}.p'.format(game)
+            data_file = 'results/ac-lstm-batch_{}.p'.format(game)
             with open(model_file, 'wb') as f:
                 # Model Save and Load Update: Include both model and optim parameters 
                 pickle.dump((model, optimizer), f)
@@ -246,11 +241,13 @@ def finish_chunk(model, optimizer, gamma, cuda):   # TBP Update: Name change onl
     loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
     loss.backward()
 
-    torch.nn.utils.clip_grad_norm(model.parameters(), 5000)   # Gradient Clipping Update: prevent exploding gradient
+    grad_norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1000)   # Gradient Clipping Update: prevent exploding gradient
 
     optimizer.step()
     del model.rewards[:]
     del model.saved_actions[:]
+
+    return grad_norm
 
 
 if __name__ == '__main__':

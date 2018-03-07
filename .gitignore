@@ -1,0 +1,8 @@
+.DS_Store
+*.pyc
+report/final_report_writeup.aux
+report/final_report_writeup.log
+report/final_report_writeup.out
+report/final_report_writeup.synctex.gz
+report/final_report_writeup.bbl
+report/final_report_writeup.blg
