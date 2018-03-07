@@ -246,7 +246,7 @@ def finish_chunk(model, optimizer, gamma, cuda):   # TBP Update: Name change onl
     loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
     loss.backward()
 
-    torch.nn.utils.clip_grad_norm(model.parameters(), 50)   # Gradient Clipping Update: prevent exploding gradient
+    torch.nn.utils.clip_grad_norm(model.parameters(), 5000)   # Gradient Clipping Update: prevent exploding gradient
 
     optimizer.step()
     del model.rewards[:]
