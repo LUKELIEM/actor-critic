@@ -32,8 +32,8 @@ def main():
 
     # Initialize constants
     num_frames = 4
-    max_episodes = 1000000
-    max_frames = 6000   # limit episode to 6000 game steps
+    max_episodes = 50000
+    max_frames = 8000   # limit episode to 6000 game steps
     gamma = 0.95
     lr = 1e-4   # LSTM Update: Work well in 1st iteration
     target_score = 21.0  # Temperature Update: specific to Pong
@@ -47,7 +47,7 @@ def main():
         optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
 
         # Initialize statistics
-        running_reward = -21  # Temperature Update: set running_reward to -21 to ensure temp = 2.0
+        running_reward = None
         running_rewards = []
         prior_eps = 0
 
@@ -76,7 +76,7 @@ def main():
             model = Policy(input_channels=num_frames, num_actions=num_actions)
             optimizer = optim.RMSprop(model.parameters(), lr=lr,
                                       weight_decay=0.1)
-            running_reward = -21
+            running_reward = None
             running_rewards = []
             prior_eps = 0
 
@@ -94,11 +94,8 @@ def main():
         if running_reward is None:
             model.temperature = 1.8   # Start with temp = 2.0 (Explore)
         else:
-            # Specific to Pong - running reward starts at -21, so we encourage the agent
-            # to explore. temp = 1.0 + 1.0*[21-(-21)]/42 = 2.0
-            # As it gets closer to 0, temp = 1.0 + 1.0(21-0)/42 = 1.5
-            # As it gets to 14, temp = 1.0 + 1.0(21-14)/42 = 1.16
-            model.temperature = max(0.8, 0.9 + (target_score - running_reward)/42* 0.9)
+        # Anneal temperature from 1.8 down to 1.0 over 100000 episodes
+            model.temperature = max(0.8, 1.8 - 0.8 * ((ep+prior_eps) / 5.0e4))
 
         state = env.reset()
         state = preprocess_state(state)
@@ -231,7 +228,7 @@ def finish_episode(model, optimizer, gamma, cuda):
     loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
     loss.backward()
 
-    total_norm = torch.nn.utils.clip_grad_norm(model.parameters(), 1000)   # Gradient Clipping Update: prevent exploding gradient
+    total_norm = torch.nn.utils.clip_grad_norm(model.parameters(), 8000)   # Gradient Clipping Update: prevent exploding gradient
 
     optimizer.step()
     del model.rewards[:]

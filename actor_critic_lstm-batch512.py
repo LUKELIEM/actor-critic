@@ -36,7 +36,7 @@ def main():
     max_frames = 6000   # limit episode to 6000 game steps
     gamma = 0.95
     lr = 1e-4   # LSTM Update: Work well in 1st iteration
-    target_score = 21.0  # Temperature Update: specific to Pong
+    target_score = 21  # Temperature Update: specific to Pong
 
     # Truncated Backprop(TBP) Update: 
     # Slide 41-44 CS231N_2017 Lecture 10 
@@ -51,7 +51,7 @@ def main():
         optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
 
         # Initialize statistics
-        running_reward = -21  # Temperature Update: set running_reward to -21 to ensure temp = 2.0
+        running_reward =None 
         running_rewards = []
         prior_eps = 0
 
@@ -80,7 +80,7 @@ def main():
             model = Policy(input_channels=num_frames, num_actions=num_actions)
             optimizer = optim.RMSprop(model.parameters(), lr=lr,
                                       weight_decay=0.1)
-            running_reward = -21
+            running_reward = None
             running_rewards = []
             prior_eps = 0
 
@@ -92,8 +92,8 @@ def main():
 
     for ep in range(max_episodes):   # Truncated Backprop(TBP) Update: For every episode
 
-        # Anneal temperature from 1.8 down to 1.0 over 10000 episodes
-        model.temperature = max(0.5, 1.8 - 0.8 * ((ep+prior_eps) / 1.0e4))
+        # Anneal temperature from 1.8 down to 1.0 over 100000 episodes
+        model.temperature = max(0.8, 1.8 - 0.8 * ((ep+prior_eps) / 1.0e5))
 
         state = env.reset()
         state = preprocess_state(state)
@@ -176,7 +176,7 @@ def main():
 
 
         # Periodically save model and optimizer parameters, and statistics
-        if (ep+prior_eps+1) % 100 == 0: 
+        if (ep+prior_eps+1) % 500 == 0: 
             model_file = 'saved_models/acl-batch_{}_cs_{}_ep_{}.p'.format(
                                                                 game, chunk_size, 
                                                                 ep+prior_eps+1)

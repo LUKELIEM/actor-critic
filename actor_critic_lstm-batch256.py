@@ -42,7 +42,7 @@ def main():
     # Slide 41-44 CS231N_2017 Lecture 10 
     # Run forward and backward through chunks of sequence vs whole sequence. While hidden values hx and cx
     # are carried forward in time forever.
-    chunk_size = 512  
+    chunk_size = 256  
 
     # Cold start
     if not warm_start:

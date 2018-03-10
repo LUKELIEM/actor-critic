@@ -9,28 +9,28 @@ human_scores = {'Asteroids-v0': 13157,
                 }
 
 # Parse arguments
-# python3 plot.py -m "ac-lstm-batch" -g "Pong-v0"
+# python3 plot.py -f "acl-batch_Pong-v0_cs_512.p" -g "Pong-v0"
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-g', action='store', dest='game')
-parser.add_argument('-m', action='store', dest='model', default=None)
+parser.add_argument('-f', action='store', dest='filename', default=None)
+
 
 args = parser.parse_args()
 game = args.game
-model = args.model
-if model is None:
+filename = args.filename
+
+if filename is None:
 	data_file = 'results/{}.p'.format(game)
 else:
-	data_file = 'results/{}_{}.p'.format(model, game)
+	data_file = 'results/{}'.format(filename)
 
 with open(data_file, 'rb') as f:
     data = pickle.load(f)
 
 human = [human_scores[game] for _ in range(len(data))]
-if model is None:
-	out_file = 'results/{}_plot.png'.format(game)
-else:
-	out_file = 'results/{}_{}_plot.png'.format(model, game)
+
+out_file = 'results/{}_plot.png'.format(game)
 
 plt.plot(data, label='Actor-Critic')
 plt.plot(human, label='Human Expert')
