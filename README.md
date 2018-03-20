@@ -15,12 +15,12 @@ https://github.com/ikostrikov/pytorch-a3c
 
 An overview of our results:
 
-** Pong ** 
+**Pong** 
 Our agent achieves:
 * human performance (9.3) after 4467 episodes  
 * max performance (16.2) after 9327 episodes
 
-** Breakout ** 
+**Breakout** 
 Our agent achieves:
 * human performance (31.8) after 22201 episodes  
 * max performance (154.8) after 109621 episodes
