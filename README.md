@@ -1,7 +1,27 @@
 # Single Agent Actor-Critic 
 
-The starter code is written by Chris Lamb where the actor-critic policy is a 2-layer CNN connected to an Actor and a Critic head.
+We implement and train a single-agent actor-critic agent based on the CNN+LSTM+Actor/Critic architecture.
 
-I changed the policy to be a 3-layer CNN followed by a 256-hidden unit LSTMCell. The output of the LSTMCell is then connected to the Actor and the Critic Head.
+We perform hyperparameter optimization on 4 key parameters:
 
-The agent learned to beat Pong by 10.0 in 4500 episodes, and to 16.0 by 9000 episodes. Its skill then crashed at around episode = 9200.
+1.	Temperature
+2.	Learning rate
+3.	Gradient Clipping
+4.	Backprop methodologies (TBPTT or BPTE)
+
+In addition we benchmark our agent against A3C 1,4 and 16 agents implemented by ikostrikov:
+
+https://github.com/ikostrikov/pytorch-a3c
+
+An overview of our results:
+
+** Pong ** 
+Our agent achieves:
+* human performance (9.3) after 4467 episodes  
+* max performance (16.2) after 9327 episodes
+
+** Breakout ** 
+Our agent achieves:
+* human performance (31.8) after 22201 episodes  
+* max performance (154.8) after 109621 episodes
+
