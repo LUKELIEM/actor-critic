@@ -15,11 +15,12 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-g', action='store', dest='game')
-    parser.add_argument('-f', action='store', dest='filename', default=None)
+    parser.add_argument('-e', action='store', dest='episodes', type=int,
+                        default=0)
 
     args = parser.parse_args()
     game = args.game
-    model_file = args.filename
+    episodes = args.episodes
 
     # Initialize environment
     render = True
@@ -28,24 +29,25 @@ def main():
 
     # Initialize constants
     num_frames = 4
-    max_episodes = 1  # Just render 1 episode
+    max_episodes = 10
     max_frames = 10000
 
     # Initialize model
-    try:
-        with open(model_file, 'rb') as f:
-            # Model Save and Load Update: Include both model and optim parameters
-            # saved_model = torch.load(model_file,map_location=lambda storage, loc:storage)
-            saved_model = pickle.load(f)
-
-            if hasattr(saved_model, '__iter__'):
+    if episodes > 0:
+        model_file = 'saved_models/actor_critic_{}_ep_{}.p'.format(game,
+                                                                   episodes)
+        try:
+            with open(model_file, 'rb') as f:
+                # Model Save and Load Update: Include both model and optim parameters
+                saved_model = pickle.load(f)
                 model, _ = saved_model
-            else:
-                model = saved_model
 
-    except OSError:
-        print('Model file not found.')
-        return
+        except OSError:
+            print('Model file not found.')
+            return
+
+    else:
+        model = Policy(input_channels=num_frames, num_actions=num_actions)
 
 
     model.temperature = 1.0   # When we play, we sample as usual.

@@ -36,20 +36,23 @@ def main():
     max_frames = 10000
 
     # Initialize model
-    try:
-        with open(model_file, 'rb') as f:
-            # Model Save and Load Update: Include both model and optim parameters
-            # saved_model = torch.load(model_file,map_location=lambda storage, loc:storage)
-            saved_model = pickle.load(f)
+    if model_file is None:
+        model = Policy(input_channels=num_frames, num_actions=num_actions)
+    else:
+        try:
+            with open(model_file, 'rb') as f:
+                # Model Save and Load Update: Include both model and optim parameters
+                # saved_model = torch.load(model_file,map_location=lambda storage, loc:storage)
+                saved_model = pickle.load(f)
 
-            if hasattr(saved_model, '__iter__'):
-                model, _ = saved_model
-            else:
-                model = saved_model
+                if hasattr(saved_model, '__iter__'):
+                    model, _ = saved_model
+                else:
+                    model = saved_model
 
-    except OSError:
-        print('Model file not found.')
-        return
+        except OSError:
+            print('Model file not found.')
+            return
 
 
     model.temperature = 1.0   # When we play, we sample as usual.

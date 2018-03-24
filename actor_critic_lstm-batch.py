@@ -21,6 +21,13 @@ def main():
     parser.add_argument('-g', action='store', dest='game')
     parser.add_argument('-w', action='store_true', dest='warm_start',
                         default=False)
+    # Workflow Update: learning rate, max_episodes and chunk_size are now arguments
+    parser.add_argument('-l', action='store', dest='learning_rate', type=float,
+                        default=1e-4)     # LSTM Update: Work well in 1st iteration
+    parser.add_argument('-m', action='store', dest='max_episodes', type=int,
+                        default=5e4)     # Workflow Update: 50000 max episodes
+    parser.add_argument('-c', action='store', dest='chunk_size', type=int, 
+                        default=1024)     # Workflow Update: chunk_size is 1024 for TBPTT
 
     args = parser.parse_args()
     game = args.game
@@ -32,33 +39,35 @@ def main():
 
     # Initialize constants
     num_frames = 4
-    max_episodes = 1000000
-    max_frames = 6000   # limit episode to 6000 game steps
+    max_episodes = args.max_episodes
+    max_frames = 10000   # limit episode to 10000 game steps
     gamma = 0.95
-    lr = 1e-4   # LSTM Update: Work well in 1st iteration
-    target_score = 21.0  # Temperature Update: specific to Pong
+    lr = args.learning_rate   # LSTM Update: Work well in 1st iteration    
+
 
     # Truncated Backprop(TBP) Update: 
     # Slide 41-44 CS231N_2017 Lecture 10 
     # Run forward and backward through chunks of sequence vs whole sequence. While hidden values hx and cx
     # are carried forward in time forever.
-    chunk_size = 512  
+    chunk_size = args.chunk_size  
 
     # Cold start
     if not warm_start:
         # Initialize model
         model = Policy(input_channels=num_frames, num_actions=num_actions)
-        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
+        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)
 
         # Initialize statistics
-        running_reward = -21  # Temperature Update: set running_reward to -21 to ensure temp = 2.0
+        running_reward =None 
         running_rewards = []
         prior_eps = 0
 
     # Warm start
     if warm_start:
 
-        data_file = 'results/acl-batch_{}_cs_{}.p'.format(game, chunk_size)
+
+        # Workflow Update: Nameing Change
+        data_file = 'results/acl-batch_{}_lr={:.3e}_cs_{}.p'.format(game, lr, chunk_size)
 
         try:
             with open(data_file, 'rb') as f:
@@ -67,8 +76,9 @@ def main():
 
             prior_eps = len(running_rewards)
 
-            model_file = 'saved_models/acl-batch_{}_cs_{}_ep_{}.p'.format(
-                                                                game, chunk_size, 
+            # Workflow Update: Nameing Change
+            model_file = 'saved_models/acl-batch_{}_lr={:.3e}_cs_{}_ep_{}.p'.format(
+                                                                game, lr, chunk_size, 
                                                                 prior_eps)
             with open(model_file, 'rb') as f:
                 # Model Save and Load Update: Include both model and optim parameters
@@ -80,7 +90,7 @@ def main():
             model = Policy(input_channels=num_frames, num_actions=num_actions)
             optimizer = optim.RMSprop(model.parameters(), lr=lr,
                                       weight_decay=0.1)
-            running_reward = -21
+            running_reward = None
             running_rewards = []
             prior_eps = 0
 
@@ -92,8 +102,8 @@ def main():
 
     for ep in range(max_episodes):   # Truncated Backprop(TBP) Update: For every episode
 
-        # Anneal temperature from 1.8 down to 1.0 over 10000 episodes
-        model.temperature = max(0.5, 1.8 - 0.8 * ((ep+prior_eps) / 1.0e4))
+        # Anneal temperature from 1.8 down to 1.0 over 50000 to 100000 episodes
+        model.temperature = max(0.8, 1.8 - 0.8 * ((ep+prior_eps) / max_episodes))
 
         state = env.reset()
         state = preprocess_state(state)
@@ -177,10 +187,11 @@ def main():
 
         # Periodically save model and optimizer parameters, and statistics
         if (ep+prior_eps+1) % 100 == 0: 
-            model_file = 'saved_models/acl-batch_{}_cs_{}_ep_{}.p'.format(
-                                                                game, chunk_size, 
+            # Workflow Update: Naming change
+            model_file = 'saved_models/acl-batch_{}_lr={:.3e}_cs_{}_ep_{}.p'.format(
+                                                                game, lr, chunk_size, 
                                                                 ep+prior_eps+1)
-            data_file = 'results/acl-batch_{}_cs_{}.p'.format(game, chunk_size)
+            data_file = 'results/acl-batch_{}_lr={:.3e}_cs_{}.p'.format(game, lr, chunk_size)
             with open(model_file, 'wb') as f:
                 # Model Save and Load Update: Include both model and optim parameters 
                 pickle.dump((model, optimizer), f)
@@ -241,7 +252,7 @@ def finish_chunk(model, optimizer, gamma, cuda):   # TBP Update: Name change onl
     loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
     loss.backward()
 
-    grad_norm = torch.nn.utils.clip_grad_norm(model.parameters(), 2000)   # Gradient Clipping Update: prevent exploding gradient
+    grad_norm = torch.nn.utils.clip_grad_norm(model.parameters(), 80000)   # Gradient Clipping Update: prevent exploding gradient
 
     optimizer.step()
     del model.rewards[:]

@@ -21,10 +21,23 @@ def main():
     parser.add_argument('-g', action='store', dest='game')
     parser.add_argument('-w', action='store_true', dest='warm_start',
                         default=False)
+    # Workflow Update: learning rate now is an argument
+    parser.add_argument('-l', action='store', dest='learning_rate', type=float,
+                        default=1e-4)     # LSTM Update: Work well in 1st iteration
+    parser.add_argument('-m', action='store', dest='max_episodes', type=int,
+                        default=5e4)     # Workflow Update: 50000 max episodes
+    parser.add_argument('-ts', action='store', dest='temp_start', type=float,
+                        default=1.8)     # Temperature Update 2: Allow trainer to set temperature annealing
+    parser.add_argument('-te', action='store', dest='temp_end', type=float,
+                        default=0.8)     # Temperature Update 2: Allow trainer to set temperature annealing
 
     args = parser.parse_args()
     game = args.game
     warm_start = args.warm_start
+    # Temperature Update 2: Allow trainer to set temperature annealing
+    temp_start = args.temp_start  
+    temp_end = args.temp_end   
+
 
     # Initialize environment
     env = gym.make(game)
@@ -32,11 +45,10 @@ def main():
 
     # Initialize constants
     num_frames = 4
-    max_episodes = 50000
-    max_frames = 8000   # limit episode to 6000 game steps
+    max_episodes = args.max_episodes
+    max_frames = 20000   # limit episode to 6000 game steps
     gamma = 0.95
-    lr = 1e-4   # LSTM Update: Work well in 1st iteration
-    target_score = 21.0  # Temperature Update: specific to Pong
+    lr = args.learning_rate
 
     max_frames_ep = 0   # track highest number of frames an episode can last
 
@@ -44,7 +56,7 @@ def main():
     if not warm_start:
         # Initialize model
         model = Policy(input_channels=num_frames, num_actions=num_actions)
-        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1)  #LSTM Change: lr = 1e-4
+        optimizer = optim.RMSprop(model.parameters(), lr=lr, weight_decay=0.1) 
 
         # Initialize statistics
         running_reward = None
@@ -88,14 +100,8 @@ def main():
 
     for ep in range(max_episodes):
 
-        # Temperature Update: specific to Pong
-        # Anneal temperature from 2.0 down to 0.9 based on how far running reward is from 
-        # target score
-        if running_reward is None:
-            model.temperature = 1.8   # Start with temp = 2.0 (Explore)
-        else:
-        # Anneal temperature from 1.8 down to 1.0 over 100000 episodes
-            model.temperature = max(0.8, 1.8 - 0.8 * ((ep+prior_eps) / 5.0e4))
+        # Temperature Update 2: Anneal temperature from temp_start to temp_end
+        model.temperature = max(temp_end, temp_start - (temp_start - temp_end) * (ep / max_episodes))
 
         state = env.reset()
         state = preprocess_state(state)
