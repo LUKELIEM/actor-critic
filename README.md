@@ -18,10 +18,10 @@ An overview of our results:
 **Pong**  
 Our agent achieves:
 * human performance (9.3) after 4467 episodes  
-* max performance (18.1) after 32898 episodes
+* max performance (18.4) after 56896 episodes
 
 **Breakout**  
 Our agent achieves:
 * human performance (31.8) after 22201 episodes  
-* max performance (246.4) after 179392 episodes
+* max performance (253.5) after 274616 episodes
 
